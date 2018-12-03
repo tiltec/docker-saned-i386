@@ -1,19 +1,40 @@
-FROM debian:stable
-MAINTAINER Jan De Luyck <jan@kcore.org>
+FROM i386/debian:stable
+MAINTAINER Tilmann Becker <tilmann.becker@gmail.com>
 
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update && apt-get install -y locales
-RUN locale-gen en_US en_US.UTF-8 && dpkg-reconfigure locales
-
-RUN apt-get install -y \
-    sane \
-    sane-utils \
-    libsane-extras \
-    libsane-hpaio \
-    dbus \
-    avahi-utils \
-    runit \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends locales \
     && apt-get clean \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && locale-gen en_US en_US.UTF-8 \
+    && dpkg-reconfigure locales
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      sane \
+      sane-utils \
+      dbus \
+      avahi-utils \
+      runit \
+    && apt-get clean \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# If the links below stop working, open http://download.ebz.epson.net/dsc/search/01/search/?OSC=LX and type in "3170"
+ADD http://a1227.g.akamai.net/f/1227/40484/7d/download.ebz.epson.net/dsc/f/01/00/01/58/31/9d81f4deee448e0440c8bcd7af581c3e8a8b43b9/iscan-2.10.0-1.c2.i386.rpm \
+    http://a1227.g.akamai.net/f/1227/40484/7d/download.ebz.epson.net/dsc/f/01/00/01/58/52/2da130fced78dc89c430122dc6111d69d182542b/iscan-plugin-gt-9400-1.0.0-1.c2.i386.rpm \
+    /tmp/
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      alien \
+      libpangox-1.0-0 \
+      libusb-0.1 \
+    && alien -i /tmp/*.rpm \
+    && apt-get remove -y alien \
+    && apt-get clean \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN adduser saned scanner \
@@ -23,17 +44,9 @@ RUN adduser saned scanner \
 COPY services/ /etc/sv/
 COPY runit_startup.sh /
 
-RUN ln -s /etc/sv/dbus /etc/service/
-RUN ln -s /etc/sv/saned /etc/service/
+RUN ln -s /etc/sv/dbus /etc/service/ \
+    && ln -s /etc/sv/saned /etc/service/
 
 EXPOSE 6566 10000 10001
 
 CMD ["/runit_startup.sh"]
-
-# Make sure that the device node e.g. /dev/usb/00x/ have group id 7 (lp) and group read access.
-# Environment variable:
-#   SANED_ACL      - [required] IP ranges or hosts that are allowed access to the daemon.
-#   SANED_DLL      - [optional] Overwrite /etc/sane.d/dll.conf with these values for faster response of saned.
-#   SANED_LOGLEVEL - [optional] Set a higher log level for sane. Default = 2, up to 128
-#
-# docker run -v /dev/bus/usb:/dev/bus/usb --privileged -e SANED_ACL="192.168.0.0/24\n10.0.0.0/8" jdeluyck/docker-saned

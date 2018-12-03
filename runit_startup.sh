@@ -2,4 +2,4 @@
 
 export > /etc/envvars
 
-exec /usr/sbin/runit
+exec /sbin/runit

@@ -22,16 +22,11 @@ sed -i 's/^#\s*data_portrange\s*=\s*.*$/data_portrange = 10000 - 10001/g' ${SANE
 # Set the DLL (optional)
 if [ -n "${SANED_DLL}" ]; then
   grep -q ^${SANED_DLL}$ ${DLLCONF}
-  if [ ${?} -ne 0 ]; then 
-    echo ${SANED_DLL} >> ${DLLCONF}
+  if [ ${?} -ne 0 ]; then
+    echo ${SANED_DLL} > ${DLLCONF}
   fi
-fi
-
-# Set the default log level (if not set)
-if [ -z "${SANED_LOG_LEVEL}" ]; then
-  SANED_LOG_LEVEL = 2
 fi
 
 sv start dbus || exit 1
 
-exec saned -d ${SANED_LOG_LEVEL}
+exec saned -d 2
